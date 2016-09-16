@@ -162,8 +162,6 @@ def zwaveEvent(physicalgraph.zwave.commands.wakeupv2.WakeUpNotification cmd) {
     //add N delay between all the commands
     def result = delayBetween(deviceCmds, commandDelay)
     
-    //set the time of last battery get
-    state.lastbatt = new Date().time
     return [ event,response(result) ]
 }
 
