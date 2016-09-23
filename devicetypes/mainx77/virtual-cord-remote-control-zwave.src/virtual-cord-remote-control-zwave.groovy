@@ -9,45 +9,46 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *  Graber Virtual Cord Remote Control Z-Wave (VCZ1)
+ *
  *  Author: Jason Niesz
  *  Date: 2016-09-22
  */
 
 metadata {
-	definition (name: "Virtual Cord Remote Control Z-Wave", namespace: "mainx77", author: "Jason Niesz") {
-    	capability "Actuator"
+    definition (name: "Virtual Cord Remote Control Z-Wave", namespace: "mainx77", author: "Jason Niesz") {
+        capability "Actuator"
         capability "Battery"
         capability "Button"
         fingerprint mfr: "026E", prod: "5643", model: "5A31"
-	}
+    }
 
-	simulator {
-		status "button 1 pushed":  "command: 5B03, payload: 000001"
-		status "button 1 held":  "command: 5B03, payload: 000201"
-		status "button 1 released":  "command: 5B03, payload: 000101"
-		status "button 2 pushed":  "command: 5B03, payload: 000002"
-		status "button 2 held":  "command: 5B03, payload: 000202"
-		status "button 2 released":  "command: 5B03, payload: 000102"
-		status "wakeup":  "command: 8407, payload: "
-	}
+    simulator {
+        status "button 1 pushed":  "command: 5B03, payload: 000001"
+        status "button 1 held":  "command: 5B03, payload: 000201"
+        status "button 1 released":  "command: 5B03, payload: 000101"
+        status "button 2 pushed":  "command: 5B03, payload: 000002"
+        status "button 2 held":  "command: 5B03, payload: 000202"
+        status "button 2 released":  "command: 5B03, payload: 000102"
+        status "wakeup":  "command: 8407, payload: "
+    }
 
-	tiles {
-		standardTile("state", "device.state", width: 2, height: 2) {
-			state "connected", label: "", icon: "st.unknown.zwave.remote-controller", backgroundColor: "#ffffff"
-		}
-        
+    tiles {
+        standardTile("state", "device.state", width: 2, height: 2) {
+            state "connected", label: "", icon: "st.unknown.zwave.remote-controller", backgroundColor: "#ffffff"
+        }
+
         valueTile("battery", "device.battery", decoration: "flat") {
             state "battery", label:'${currentValue}% battery', unit:""
         }
-		main "state"
-		details(["state","battery"])
-	}
+        main "state"
+        details(["state","battery"])
+    }
 }
 
 def parse(String description) {
     def result = null
     def cmd = zwave.parse(description,[ 0x5B: 1, 0x80: 1, 0x84: 2 ])
-    
+
     if (cmd) {
         result = zwaveEvent(cmd)
         log.debug "Event: ${result.inspect()}"
@@ -64,10 +65,10 @@ def zwaveEvent(physicalgraph.zwave.commands.wakeupv2.WakeUpNotification cmd) {
     def event = createEvent(descriptionText: "${device.displayName} woke up", isStateChange: false)
     def deviceCmds = [ zwave.batteryV1.batteryGet().format()
     ]
-    
+
     //tell device we don't have any more commands to send
     deviceCmds << zwave.wakeUpV2.wakeUpNoMoreInformation().format()
-    
+
     //add N delay between all the commands
     def result = delayBetween(deviceCmds, commandDelay)
     return [ event, response(result) ]
@@ -91,7 +92,7 @@ def zwaveEvent(physicalgraph.zwave.commands.batteryv1.BatteryReport cmd) {
 def zwaveEvent(physicalgraph.zwave.commands.centralscenev1.CentralSceneNotification cmd) {
     //log.debug "Scene: ${cmd.sceneNumber} Attributes: ${cmd.keyAttributes}"
     def event = null
-    
+
     // scene 1 represents top button, scene 2 represents bottom button
     switch (cmd.sceneNumber) {
         case 1:
@@ -101,13 +102,13 @@ def zwaveEvent(physicalgraph.zwave.commands.centralscenev1.CentralSceneNotificat
             event = handleKeyAttribute(cmd.sceneNumber, cmd.keyAttributes)
             break
         default:
-       		log.debug "Unknown Scene Number: ${cmd.sceneNumber}"
+            log.debug "Unknown Scene Number: ${cmd.sceneNumber}"
             break
     }
     if (!state.lastbatt || (new Date().time) - state.lastbatt > 24*60*60*1000) {
-    	return [event,response(zwave.batteryV1.batteryGet().format())]
+        return [event,response(zwave.batteryV1.batteryGet().format())]
     } else {
-    	return event
+        return event
     }
 }
 
@@ -119,23 +120,23 @@ def zwaveEvent(physicalgraph.zwave.Command cmd) {
 }
 
 private handleKeyAttribute(sceneNumber, keyAttributes) {
-	def result = null
+    def result = null
     // attribute 0 represents button press, attribute 2 represents press and hold, attribute 1 represents button hold release
     switch (keyAttributes) {
-    	case 0:
-        	result = createEvent(name: "button", value: "pushed", data: [buttonNumber: "${sceneNumber}"],
-            	descriptionText: "${device.displayName} Button ${sceneNumber} pushed", isStateChange: true)
-        	break
-        case 1:
-        	result = createEvent(name: "button", value: "released", data: [buttonNumber: "${sceneNumber}"],
-            	descriptionText: "${device.displayName} Button ${sceneNumber} released", isStateChange: true)
+        case 0:
+            result = createEvent(name: "button", value: "pushed", data: [buttonNumber: "${sceneNumber}"],
+                descriptionText: "${device.displayName} Button ${sceneNumber} pushed", isStateChange: true)
             break
-        case 2: 
-        	result = createEvent(name: "button", value: "held", data: [buttonNumber: "${sceneNumber}"],
-            	descriptionText: "${device.displayName} Button ${sceneNumber} held", isStateChange: true)
+        case 1:
+            result = createEvent(name: "button", value: "released", data: [buttonNumber: "${sceneNumber}"],
+                descriptionText: "${device.displayName} Button ${sceneNumber} released", isStateChange: true)
+            break
+        case 2:
+            result = createEvent(name: "button", value: "held", data: [buttonNumber: "${sceneNumber}"],
+                descriptionText: "${device.displayName} Button ${sceneNumber} held", isStateChange: true)
             break
         default:
-        	log.debug "Unknown key Attribute: ${keyAttributes}"
+            log.debug "Unknown key Attribute: ${keyAttributes}"
     }
     return result
 }
