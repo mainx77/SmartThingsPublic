@@ -128,7 +128,7 @@ private handleKeyAttribute(sceneNumber, keyAttributes) {
                 descriptionText: "${device.displayName} Button ${sceneNumber} pushed", isStateChange: true)
             break
         case 1:
-            result = createEvent(name: "button", value: "released", data: [buttonNumber: "${sceneNumber}"],
+            result = createEvent(name: "button", value: "heldReleased", data: [buttonNumber: "${sceneNumber}"],
                 descriptionText: "${device.displayName} Button ${sceneNumber} released", isStateChange: true)
             break
         case 2:
